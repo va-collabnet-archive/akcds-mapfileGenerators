@@ -63,27 +63,29 @@ public class GenerateMapFile
 
 	public void execute() throws Exception
 	{
-		DbConn dbConn = new DbConn();
-		dbConn.connectDTS(new File(outputDirectory, "../config/dts_conn_params.txt"));
+		File params = new File(outputDirectory, "../config/dts_conn_params.txt");
+		DbConn dbConn = new DbConn(params);
 		
-		Namespace ns = dbConn.nameQuery.findNamespaceById(dbConn.getNamespace());
+		Namespace ns = dbConn.getNameQuery().findNamespaceById(dbConn.getNamespace());
 		System.out.println("*** Connected to: " + dbConn.toString() + " " + ns.toString() + " ***");
 		
 		String pattern = "*";   
 		DTSSearchOptions options = new DTSSearchOptions();
-		options.setLimit(500);
+		//options.setLimit(500);
 		options.setNamespaceId(dbConn.getNamespace());
 		System.out.println("Searching for RXNorm Concepts");
 		
-		codesToProcess_ = dbConn.searchQuery.findConceptsWithNameMatching(pattern, options);
+		codesToProcess_ = dbConn.getSearchQuery().findConceptsWithNameMatching(pattern, options);
 
 		System.out.println("Found " + codesToProcess_.length + " RXNorm Concept Codes");
 		
-		Processor[] p = new Processor[20];
+		dbConn.close();
+		
+		Processor[] p = new Processor[3]; //Seem to be limited to 3 at the moment... 
 		
 		for (int i = 0; i < p.length; i++)
 		{
-			p[i] = new Processor(dbConn);
+			p[i] = new Processor(new DbConn(params));
 			Thread t = new Thread(p[i]);
 			t.setName("" + i);
 			t.start();
@@ -285,8 +287,9 @@ public class GenerateMapFile
 			}
 			catch (Exception e)
 			{
-				System.err.println("Thread processing Error!");
+				System.err.println("Thread processing Error in thread " + Thread.currentThread().getName());
 				e.printStackTrace();
+				System.exit(-1);
 			}
 			isFinished_ = true;
 		}

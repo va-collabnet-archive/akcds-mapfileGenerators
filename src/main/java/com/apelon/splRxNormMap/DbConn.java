@@ -16,14 +16,8 @@ import com.apelon.apelonserver.client.ServerConnection;
 import com.apelon.apelonserver.client.ServerConnectionJDBC;
 import com.apelon.apelonserver.client.ServerConnectionSecureSocket;
 import com.apelon.apelonserver.client.ServerConnectionSocket;
-import com.apelon.dts.client.association.AssociationQuery;
-import com.apelon.dts.client.concept.BaseConceptQuery;
 import com.apelon.dts.client.concept.DTSConceptQuery;
-import com.apelon.dts.client.concept.NavQuery;
-import com.apelon.dts.client.concept.OntylogConceptQuery;
 import com.apelon.dts.client.concept.SearchQuery;
-import com.apelon.dts.client.concept.ThesaurusConceptQuery;
-import com.apelon.dts.client.term.TermQuery;
 
 /**
  * Read DTS Server connection parameters from a text file, and create a DTS connection, along with various query objects.
@@ -46,19 +40,15 @@ import com.apelon.dts.client.term.TermQuery;
 public class DbConn
 {
 	// DTS
-	ServerConnection connection_;
+	private ServerConnection connection_;
 	
-	public SearchQuery searchQuery;
-	public ThesaurusConceptQuery thesQuery;
-	public AssociationQuery associationQuery;
-	public com.apelon.dts.client.namespace.NamespaceQuery nameQuery;
-	public BaseConceptQuery bsq;
-	public TermQuery termQry;
-	public NavQuery navQry;
-	public OntylogConceptQuery ontQry;
-
 	private int namespace_;
 	private String connectionInfo_;
+	
+	public DbConn(File connectionParametersFile) throws ApelonException, IOException, ClassNotFoundException
+	{
+		connectDTS(connectionParametersFile);
+	}
 	
 	public int getNamespace()
 	{
@@ -68,6 +58,11 @@ public class DbConn
 	public String toString()
 	{
 		return (connectionInfo_ == null ? "No DTS connection" : connectionInfo_);
+	}
+	
+	public void close() throws Exception
+	{
+		connection_.close();
 	}
 
 	private ServerConnection getConnection(File parametersFile) throws ApelonException, IOException
@@ -135,7 +130,7 @@ public class DbConn
 		return sc;
 	}
 
-	public void connectDTS(File connectionParametersFile) throws ApelonException, IOException, ClassNotFoundException
+	private void connectDTS(File connectionParametersFile) throws ApelonException, IOException, ClassNotFoundException
 	{
 		connection_ = getConnection(connectionParametersFile);
 		connection_.setQueryServer(Class.forName("com.apelon.dts.server.SearchQueryServer"),
@@ -155,17 +150,25 @@ public class DbConn
 		connection_.setQueryServer(Class.forName("com.apelon.dts.server.NavQueryServer"),
 				com.apelon.dts.client.common.DTSHeader.NAVSERVER_HEADER);
 
-		termQry = TermQuery.createInstance(connection_);
-		associationQuery = (AssociationQuery) AssociationQuery.createInstance(connection_);
-		searchQuery = (SearchQuery) SearchQuery.createInstance(connection_);
-		thesQuery = (ThesaurusConceptQuery) ThesaurusConceptQuery.createInstance(connection_);
-		nameQuery = com.apelon.dts.client.namespace.NamespaceQuery.createInstance(connection_);
-		navQry = NavQuery.createInstance(connection_);
-		ontQry = OntylogConceptQuery.createInstance(connection_);
+//		termQry = TermQuery.createInstance(connection_);
+//		associationQuery = (AssociationQuery) AssociationQuery.createInstance(connection_);
+//		thesQuery = (ThesaurusConceptQuery) ThesaurusConceptQuery.createInstance(connection_);
+//		navQry = NavQuery.createInstance(connection_);
+//		ontQry = OntylogConceptQuery.createInstance(connection_);
 	}
 	
 	public DTSConceptQuery getConceptQueryInstance()
 	{
 		return DTSConceptQuery.createInstance(connection_);
+	}
+	
+	public com.apelon.dts.client.namespace.NamespaceQuery getNameQuery()
+	{
+		return com.apelon.dts.client.namespace.NamespaceQuery.createInstance(connection_);
+	}
+	
+	public SearchQuery getSearchQuery()
+	{
+		return (SearchQuery) SearchQuery.createInstance(connection_);
 	}
 }
