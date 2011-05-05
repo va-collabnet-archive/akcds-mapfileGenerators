@@ -34,6 +34,21 @@ import com.apelon.splRxNormMap.data.SplAsKey;
  * 
  * Any concepts from RXNorm that don't provide one of the above mappings are ignored.
  * 
+ * Initial notes from Carol:
+ * 
+ * rxnorm has spl set id as a property, it also has VUID. VUID is a property in NDFRT too
+ * so we can go from label to RxNorm to NDF-rt by means of spl_set_id and VUID
+ * however we know there are gaps, so we need to see what they are
+ * when you search in RxNorm and there are more than one hit with that spl set id, you will want 
+ * the one with TTY = SCD which stands for "Semantic Clinical Drug".
+ * if we find that this doesn't work well...we can also try NDC, but since there are numerous ncds
+ * on a single lable, the label may be easier...but again, we'll have to see what the coverage is 
+ * like in RxNorm of SPL_SET_ID
+ * 
+ * so let's do that, based on the latest RxNorm (being loaded to the same DTS instance for you), 
+ * we create a spl_set_id to VUID mapping that is used during the load process to create the triple 
+ * format in workbench
+ * 
  * @author Dan Armbrust
  */
 
