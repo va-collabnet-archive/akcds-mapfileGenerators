@@ -7,7 +7,7 @@
   <artifactId>splRxNormMap</artifactId>
   <version>1.0-SNAPSHOT</version>
   <name>splRxNormMap</name>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
   
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -23,41 +23,49 @@
      	<groupId>com.apelon.dts</groupId>
      	<artifactId>dtscore</artifactId>
      	<version>1</version>
+     	<scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.apelon.dts</groupId>
       <artifactId>apelonserver</artifactId>
       <version>1</version>
+      <scope>provided</scope>
     </dependency>    
     <dependency>
       <groupId>com.apelon.dts</groupId>
       <artifactId>common</artifactId>
       <version>1</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.apelon.dts</groupId>
       <artifactId>ojdbc14</artifactId>
       <version>1</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.apelon.dts</groupId>
       <artifactId>log4j</artifactId>
       <version>1</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.apelon.dts</groupId>
       <artifactId>xercesImpl</artifactId>
       <version>1</version>
+      <scope>provided</scope>
     </dependency>  
     <dependency>
       <groupId>com.apelon.dts</groupId>
       <artifactId>xstream</artifactId>
       <version>1</version>
+      <scope>provided</scope>
     </dependency>   
     <dependency>
       <groupId>com.apelon.dts</groupId>
       <artifactId>xpp3</artifactId>
       <version>1</version>
+      <scope>provided</scope>
     </dependency>    
    </dependencies>
   

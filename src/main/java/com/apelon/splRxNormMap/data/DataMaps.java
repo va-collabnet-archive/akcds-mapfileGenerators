@@ -19,6 +19,7 @@ public class DataMaps implements Externalizable
 	private String sourceDescription_;
 	private Hashtable<String, NdcAsKey> ndcAsKey_;
 	private Hashtable<String, SplAsKey> splAsKey_;
+	private long buildDate = System.currentTimeMillis();
 
 	public DataMaps()
 	{
@@ -46,15 +47,21 @@ public class DataMaps implements Externalizable
 	{
 		return splAsKey_;
 	}
+	
+	public long getBuildDate()
+	{
+		return buildDate;
+	}
 
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException
 	{
-		out.writeShort(1);
+		out.writeShort(2);
 		out.writeObject(sourceDescription_);
 		out.writeObject(ndcAsKey_);
 		out.writeObject(splAsKey_);
+		out.writeLong(buildDate);
 
 	}
 
@@ -63,15 +70,20 @@ public class DataMaps implements Externalizable
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException
 	{
 		short ver = in.readShort();
-		if (ver == 1)
+		if (ver < 1 || ver > 2)
+		{
+			throw new IOException("Unknown version " + ver);
+		}
+		
+		if (ver >= 1)
 		{
 			sourceDescription_ = (String)in.readObject();
 			ndcAsKey_ = (Hashtable<String, NdcAsKey>) in.readObject();
 			splAsKey_ = (Hashtable<String, SplAsKey>) in.readObject();
 		}
-		else
+		if (ver == 2)
 		{
-			throw new IOException("Unknown version " + ver);
+			buildDate = in.readLong();
 		}
 	}
 }

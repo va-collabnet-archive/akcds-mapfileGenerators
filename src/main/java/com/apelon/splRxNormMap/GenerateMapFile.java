@@ -130,7 +130,7 @@ public class GenerateMapFile
 		System.out.println();
 		System.out.println("Processing Complete - Storing results");
 		
-		ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(new File(outputDirectory, "mapData"))));
+		ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(new File(outputDirectory, "splRxNormMapData"))));
 		DataMaps dm = new DataMaps(dbConn.toString() + " " + ns.toString(), ndcAsKey_, splAsKey_);
 		oos.writeObject(dm);
 		
@@ -190,11 +190,11 @@ public class GenerateMapFile
 						}
 						else if (dp.getName().equals("NDC"))
 						{
-							ndcs.add(dp.getValue());
+							ndcs.add(dp.getValue().toUpperCase());
 						}
 						else if (dp.getName().equals("SPL_SET_ID"))
 						{
-							splSetIds.add(dp.getValue());
+							splSetIds.add(dp.getValue().toUpperCase());
 						}
 						else if (dp.getName().equals("TTY"))
 						{
