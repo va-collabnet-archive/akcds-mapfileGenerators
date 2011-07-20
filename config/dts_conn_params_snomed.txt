@@ -1,0 +1,20 @@
+# File format is a single line which contains one of two formats: 
+
+# Local DB JDBC Connection:
+# DB|namespace|host|port|user|password|instance
+
+# DTS ServerConnectionSecureSocket
+# SCSS|namespace||host|port|user|password
+
+# DTS ServerConnectionSocket
+# SCS|namespace|host|port
+
+###############################################
+
+# 30 is snomed
+
+#DB:30|127.0.0.1|1521|ndfrt|ndfrt|orcl
+
+SCSS|30|216.47.173.8|3535|vaakcds|va123!
+
+#SCS|30|216.47.173.8|3535

@@ -1,4 +1,4 @@
-package com.apelon.splRxNormMap;
+package com.apelon.dtsUtil;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
