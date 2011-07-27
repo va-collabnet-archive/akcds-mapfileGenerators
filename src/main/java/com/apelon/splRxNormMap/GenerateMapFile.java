@@ -11,6 +11,8 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import com.apelon.dts.client.DTSException;
+import com.apelon.dts.client.association.ConceptAssociation;
 import com.apelon.dts.client.attribute.DTSProperty;
 import com.apelon.dts.client.concept.ConceptAttributeSetDescriptor;
 import com.apelon.dts.client.concept.DTSConcept;
@@ -22,8 +24,8 @@ import com.apelon.dtsUtil.DbConn;
 import com.apelon.splRxNormMap.data.DataMaps;
 import com.apelon.splRxNormMap.data.NdcAsKey;
 import com.apelon.splRxNormMap.data.NdcAsKeyData;
-import com.apelon.splRxNormMap.data.SplAsKeyData;
 import com.apelon.splRxNormMap.data.SplAsKey;
+import com.apelon.splRxNormMap.data.SplAsKeyData;
 
 /**
  * Connect to a DTS server hosting RXNorm, and generate mapping file that get us from:
@@ -37,19 +39,44 @@ import com.apelon.splRxNormMap.data.SplAsKey;
  * 
  * Initial notes from Carol:
  * 
- * rxnorm has spl set id as a property, it also has VUID. VUID is a property in NDFRT too
- * so we can go from label to RxNorm to NDF-rt by means of spl_set_id and VUID
- * however we know there are gaps, so we need to see what they are
- * when you search in RxNorm and there are more than one hit with that spl set id, you will want 
- * the one with TTY = SCD which stands for "Semantic Clinical Drug".
+ * rxnorm has spl set id as a property, it also has VUID. VUID is a property in NDFRT too so we can go from label to RxNorm to NDF-rt by
+ * means of spl_set_id and VUID however we know there are gaps, so we need to see what they are when you search in RxNorm and there are more
+ * than one hit with that spl set id, you will want the one with TTY = SCD which stands for "Semantic Clinical Drug". 
  * if we find that this doesn't work well...we can also try NDC, but since there are numerous ncds
  * on a single lable, the label may be easier...but again, we'll have to see what the coverage is 
  * like in RxNorm of SPL_SET_ID
  * 
- * so let's do that, based on the latest RxNorm (being loaded to the same DTS instance for you), 
- * we create a spl_set_id to VUID mapping that is used during the load process to create the triple 
- * format in workbench
+ * so let's do that, based on the latest RxNorm (being loaded to the same DTS instance for you), we create a spl_set_id to VUID mapping that
+ * is used during the load process to create the triple format in workbench
  * 
+ * 
+ * In cases where you find an SPL_SET_ID in RxNorm but that concept has a TTY = SBD (branded drugs) and there is no VUID, you will have to
+ * see if it has a "tradename_of" association. This will lead to a TTY= SCD (clinical drugs)which will likely have a VUID.
+ * 
+ * For example, from the list we have Bosetan with SPL_SET_ID = 749e42fb-2fe0-45dd-9268-b43bb3f4081c.
+ * 
+ * The RxNorm Branded Drugs "bosentan 62.5 MG Oral Tablet [349253]" and "bosentan 125 MG Oral Tablet [Tracleer] [656660]" are found with the
+ * SPL_SET_ID property. Neither of these have a VUID. Following the inverse association "tradename_of" leads to
+ * "bosentan 62.5 MG Oral Tablet [349253]" and "bosentan 125 MG Oral Tablet [656659]" Looking at these two concepts we confirm they are
+ * clinical drugs that give us the VUIDs = 4015827 and 4015828. These are found on the corresponding VA Products =
+ * "BOSENTAN 62.5MG TAB [VA Product]" and "BOSENTAN 125MG TAB [VA Product]".
+ * 
+ * Looking at the label, confirms that these are the correct VA products.
+ * 
+ * In other words I think the search could go like this:
+ * 
+ * Find SPL_SET_ID in RxNorm
+ *        For RxNorm concepts with VUID
+ *                Find corresponding VUID in NDF-RT
+ *                        Match is a VA Product -> Done
+ *                        Match is not a VA Product -> Log to "Not VA Product"
+ *        For RxNorm concepts without VUID
+ *                Find value of "tradename_of" association
+ *                        Get VUID  from target
+ *                                Find corresponding VUID in NDF-RT
+ *                                        Match is a VA Product -> Done
+ *                                        Match is not a VA Product -> Log to "Not VA Product"
+ *               No "tradename_of" association -> Log to  "No Mapping"
  * @author Dan Armbrust
  */
 
@@ -181,6 +208,7 @@ public class GenerateMapFile
 					HashSet<String> ndcs = new HashSet<String>();
 					HashSet<String> splSetIds = new HashSet<String>();
 					HashSet<String> ttys = new HashSet<String>();
+					HashSet<String> tradenameOfVuids = new HashSet<String>();
 					String code = dtsConcept.getCode();
 					
 					for (DTSProperty dp : dtsConcept.getFetchedProperties())
@@ -202,6 +230,12 @@ public class GenerateMapFile
 							ttys.add(dp.getValue());
 						}
 					}
+					
+					if (vuids.size() == 0 && ttys.contains("SBD"))
+					{
+						tradenameOfVuids = followTradeNameOf(conceptQuery_, dbConn_, dtsConcept);
+					}
+					
 					
 					//Store the gathered info into each of the data stores.
 					//First using the ndc as a key.
@@ -259,10 +293,10 @@ public class GenerateMapFile
 							}
 						}
 						
-						//Our thread has now locked this ndc value.
+						//Our thread has now locked this spl value.
 						SplAsKey splAsKey =  splAsKey_.get(splValue);
 						
-						SplAsKeyData codeData = new SplAsKeyData(code, ttys, vuids, ndcs);
+						SplAsKeyData codeData = new SplAsKeyData(code, ttys, vuids, ndcs, tradenameOfVuids);
 						
 						if (splAsKey == null)
 						{
@@ -309,5 +343,49 @@ public class GenerateMapFile
 			}
 			isFinished_ = true;
 		}
+	}
+	
+	private HashSet<String> followTradeNameOf(DTSConceptQuery conceptQuery, DbConn dbConn, DTSConcept dtsConcept) throws DTSException
+	{
+		HashSet<String> tradeNameVuids = new HashSet<String>();
+		
+		ConceptAssociation[] assns = dtsConcept.getFetchedInverseConceptAssociations();
+		HashSet<String> codes = new HashSet<String>();
+		for (ConceptAssociation assn : assns)
+		{
+			if (assn.getAssociationType().getInverseName().equalsIgnoreCase("tradename_of"))
+			{
+				codes.add(assn.getFromConcept().getCode());
+			}
+		}
+		
+		for (String code : codes)
+		{
+			DTSConcept tradeNameConcept = conceptQuery.findConceptByCode(code, dbConn.getNamespace(), ConceptAttributeSetDescriptor.ALL_ATTRIBUTES);
+			
+			//get the TTY and VUIDs
+			HashSet<String> vuids = new HashSet<String>();
+			HashSet<String> ttys = new HashSet<String>();
+			
+			for (DTSProperty dp : tradeNameConcept.getFetchedProperties())
+			{
+				if (dp.getName().equals("VUID"))
+				{
+					vuids.add(dp.getValue());
+				}
+				else if (dp.getName().equals("TTY"))
+				{
+					ttys.add(dp.getValue());
+				}
+			}
+			
+			if (ttys.contains("SCD"))
+			{
+				//Use these VUIDs
+				tradeNameVuids.addAll(vuids);
+			}
+		}
+		
+		return tradeNameVuids;
 	}
 }
