@@ -22,7 +22,8 @@ public class ViewDataFile
 	
 	public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException
 	{
-		DataMaps dm = readData(new File("data/mapData"));
+		DataMaps dm = readData(new File("data/splRxNormMapData"));
+		//DataMaps dm = readData(new File("../../akcds/splData/data/splRxNormMapData"));
 		
 		System.out.println(dm.getSourceDescription());
 		System.out.println("NDC as key: " + dm.getNdcAsKey().size());
