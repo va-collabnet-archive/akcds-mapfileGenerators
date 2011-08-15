@@ -77,6 +77,10 @@ import com.apelon.splRxNormMap.data.SplAsKeyData;
  *                                        Match is a VA Product -> Done
  *                                        Match is not a VA Product -> Log to "Not VA Product"
  *               No "tradename_of" association -> Log to  "No Mapping"
+ *               
+ * Note, as of 8/11/11, we tweaked some of the logic, and now utilize all of the vuids - direct and tradename of.  So we now always get the
+ * tradename of VUIDs as well.  Also removed the SBD and SCD checks - some of these were re-written later in the process, 
+ * when we get to NDF-RT.
  * @author Dan Armbrust
  */
 
@@ -90,6 +94,8 @@ public class GenerateMapFile
 	
 	private HashSet<String> lockedNDCs = new HashSet<String>();
 	private HashSet<String> lockedSPLs = new HashSet<String>();
+	
+	private Hashtable<String, HashSet<String>> tradenameOfCache_ = new Hashtable<String, HashSet<String>>();
 	
 	private OntylogConcept[] codesToProcess_; 
 	int processPos_ = 0;
@@ -231,10 +237,7 @@ public class GenerateMapFile
 						}
 					}
 					
-					if (vuids.size() == 0 && ttys.contains("SBD"))
-					{
-						tradenameOfVuids = followTradeNameOf(conceptQuery_, dbConn_, dtsConcept);
-					}
+					tradenameOfVuids = followTradeNameOf(conceptQuery_, dbConn_, dtsConcept);
 					
 					
 					//Store the gathered info into each of the data stores.
@@ -361,29 +364,25 @@ public class GenerateMapFile
 		
 		for (String code : codes)
 		{
-			DTSConcept tradeNameConcept = conceptQuery.findConceptByCode(code, dbConn.getNamespace(), ConceptAttributeSetDescriptor.ALL_ATTRIBUTES);
-			
 			//get the TTY and VUIDs
-			HashSet<String> vuids = new HashSet<String>();
-			HashSet<String> ttys = new HashSet<String>();
-			
-			for (DTSProperty dp : tradeNameConcept.getFetchedProperties())
+			HashSet<String> vuids = tradenameOfCache_.get(code); 
+				
+			if (vuids == null)
 			{
-				if (dp.getName().equals("VUID"))
-				{
-					vuids.add(dp.getValue());
-				}
-				else if (dp.getName().equals("TTY"))
-				{
-					ttys.add(dp.getValue());
-				}
-			}
+				vuids = new HashSet<String>();
 			
-			if (ttys.contains("SCD"))
-			{
-				//Use these VUIDs
-				tradeNameVuids.addAll(vuids);
+				DTSConcept tradeNameConcept = conceptQuery.findConceptByCode(code, dbConn.getNamespace(), ConceptAttributeSetDescriptor.ALL_ATTRIBUTES);
+				
+				for (DTSProperty dp : tradeNameConcept.getFetchedProperties())
+				{
+					if (dp.getName().equals("VUID"))
+					{
+						vuids.add(dp.getValue());
+					}
+				}
+				tradenameOfCache_.put(code, vuids);
 			}
+			tradeNameVuids.addAll(vuids);
 		}
 		
 		return tradeNameVuids;
